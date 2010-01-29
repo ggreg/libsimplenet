@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libsimplenet
+Description: simple network library. 
+Version: @LIB_VER_MAJOR@.@LIB_VER_MINOR@
+Libs: -lsimplenet
+Libs.private: -lev
+Cflags:
