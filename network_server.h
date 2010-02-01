@@ -36,10 +36,11 @@ struct server {
         int     fd;
         struct peer_client  *clients;
         uint32_t nr_clients;
+	uint32_t max_clients;
         struct sockaddr_in  addr;
 };
 
-struct server *server_new(unsigned int max_clients);
+struct server *server_new(uint32_t max_clients);
 void server_free(struct server *server);
 
 int server_init(struct server *, server_flags_t);

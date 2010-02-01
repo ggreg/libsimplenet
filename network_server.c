@@ -32,7 +32,7 @@ static void server_callback_read(EV_P_ ev_io *w, int revents);
 /* Public API */
 
 struct server *
-server_new(unsigned int max_clients)
+server_new(uint32_t max_clients)
 {
 	struct server *server = malloc(sizeof(*server));
 	if (server == NULL)
@@ -48,6 +48,7 @@ server_new(unsigned int max_clients)
 	}
 	memset(server->clients, 0, max_clients * sizeof(*server->clients));
 	server->nr_clients = 0;
+	server->max_clients = max_clients;
 	memset(&server->addr, 0, sizeof(server->addr));
 
 	return server;
