@@ -135,14 +135,15 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 	socklen_t socklen = sizeof(server->addr);
 	int fd = accept(server->fd, (struct sockaddr *) &server->addr, &socklen);
 	if (fd == -1) {
-		perror("accept");
+		/* LOG accept failed */	
+		return ;
+	}
 
 	if (server->nr_clients == server->max_clients) {
 		close(fd);
 		/* LOG max clients reached */
 		return ;
 	}
-	
 	struct peer_client *client = &server->clients[server->nr_clients];
 	server->nr_clients++;
 
@@ -151,11 +152,12 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 			client->hostname, NI_MAXHOST, port, NI_MAXSERV,
 			NI_NUMERICHOST | NI_NUMERICSERV);
 	if (err == -1) {
-		perror("getnameinfo");
+		/* LOG cannot getnameinfo() */
 		return ;
 	}
 	client->port = atoi(port);
-	printf("connection from: %s:%d\n", client->hostname, client->port);
+
+	/* LOG "connection from: %s:%d\n", client->hostname, client->port */
 	ev_io_init(&client->watcher, server_callback_read, fd, EV_READ);
 	ev_io_start(loop, &client->watcher);
 }
