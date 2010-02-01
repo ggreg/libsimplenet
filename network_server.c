@@ -103,7 +103,17 @@ server_listen(struct server *server, const char *host, int port, int backlog)
 
 static
 void
-server_callback_read(EV_P_ ev_io *w, int revents)
+server_callback_disconnect(struct ev_loop *loop, ev_io *w, int revents)
+{
+	struct peer_client *client = (struct peer_client *) w;
+	ev_io_stop(loop, w);
+	close(w->fd);
+	((struct server *) client->server)->nr_clients--;
+}
+
+static
+void
+server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 {
 	char buf[4096];
 
@@ -122,8 +132,7 @@ server_callback_read(EV_P_ ev_io *w, int revents)
 	return ;
 
 disconnect:
-	ev_io_stop(loop, w);
-	close(w->fd);
+	server_callback_disconnect(loop, w, revents);
 }
 
 
@@ -156,6 +165,7 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 		return ;
 	}
 	client->port = atoi(port);
+	client->server = server;
 
 	/* LOG "connection from: %s:%d\n", client->hostname, client->port */
 	ev_io_init(&client->watcher, server_callback_read, fd, EV_READ);

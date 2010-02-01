@@ -27,6 +27,7 @@ typedef enum {
 
 struct peer_client {
         ev_io   watcher;
+	const struct server *server;
         char    hostname[NI_MAXHOST]; /* NI_MAXHOST = 1025 */
         int     port;
 };
@@ -39,6 +40,7 @@ struct server {
 	uint32_t max_clients;
         struct sockaddr_in  addr;
 };
+
 
 /** Allocate and initialize a new `struct server`.
  * Allocates server->clients and initialize every attribute.
