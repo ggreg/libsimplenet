@@ -136,6 +136,10 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 	int fd = accept(server->fd, (struct sockaddr *) &server->addr, &socklen);
 	if (fd == -1) {
 		perror("accept");
+
+	if (server->nr_clients == server->max_clients) {
+		close(fd);
+		/* LOG max clients reached */
 		return ;
 	}
 	
