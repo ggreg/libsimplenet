@@ -21,6 +21,7 @@
 
 #include <ev.h>
 
+#include "list.h"
 #include "network_socket.h"
 #include "network_server.h"
 
@@ -39,31 +40,18 @@ server_new(uint32_t max_clients)
 		return NULL;
 	memset(&server->watcher, 0, sizeof(server->watcher));
 	server->fd = -1;
-
-	int err = 0;
-	server->clients = calloc(max_clients, sizeof(*server->clients));
-	if (server->clients == NULL) { 
-		err = errno;
-		goto fail_clients_malloc;
-	}
-	memset(server->clients, 0, max_clients * sizeof(*server->clients));
+	INIT_LIST_HEAD(&server->clients);
 	server->nr_clients = 0;
 	server->max_clients = max_clients;
 	memset(&server->addr, 0, sizeof(server->addr));
 
 	return server;
-fail_clients_malloc:
-	free(server);
-	errno = err;
-	return NULL;
 }
 
 void
 server_free(struct server *server)
 {
 	assert(server != NULL);
-	if (server->clients)
-		free(server->clients);
 	free(server);
 }
 
@@ -107,8 +95,15 @@ server_callback_disconnect(struct ev_loop *loop, ev_io *w, int revents)
 {
 	struct peer_client *client = (struct peer_client *) w;
 	ev_io_stop(loop, w);
-	close(w->fd);
-	((struct server *) client->server)->nr_clients--;
+	socket_close(w->fd);
+
+	struct server *server = client->server;
+	if (list_is_singular(&server->clients))
+		INIT_LIST_HEAD(&server->clients);
+	else
+		list_del(&server->clients, &client->list);
+	server->nr_clients--;
+	free(client);
 }
 
 static
@@ -149,13 +144,11 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 	}
 
 	if (server->nr_clients == server->max_clients) {
-		close(fd);
+		socket_close(fd);
 		/* LOG max clients reached */
 		return ;
 	}
-	struct peer_client *client = &server->clients[server->nr_clients];
-	server->nr_clients++;
-
+	struct peer_client *client = malloc(sizeof(*client));
 	char port[NI_MAXSERV]; /* size = 32 */
 	int err = getnameinfo((struct sockaddr *) &server->addr, socklen,
 			client->hostname, NI_MAXHOST, port, NI_MAXSERV,
@@ -166,6 +159,9 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 	}
 	client->port = atoi(port);
 	client->server = server;
+	INIT_LIST_HEAD(&client->list);
+	list_add(&client->list, &server->clients);
+	server->nr_clients++;
 
 	/* LOG "connection from: %s:%d\n", client->hostname, client->port */
 	ev_io_init(&client->watcher, server_callback_read, fd, EV_READ);

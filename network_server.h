@@ -21,13 +21,17 @@
 
 #include <ev.h>
 
+#include "list.h"
+
+
 typedef enum {
 	SERVER_NONBLOCKING = O_NONBLOCK
 } server_flags_t;
 
 struct peer_client {
         ev_io   watcher;
-	const struct server *server;
+	struct server *server;
+	struct list_head list;
         char    hostname[NI_MAXHOST]; /* NI_MAXHOST = 1025 */
         int     port;
 };
@@ -35,7 +39,7 @@ struct peer_client {
 struct server {
         ev_io   watcher;
         int     fd;
-        struct peer_client  *clients;
+        struct list_head clients;
         uint32_t nr_clients;
 	uint32_t max_clients;
         struct sockaddr_in  addr;
