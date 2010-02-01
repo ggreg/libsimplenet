@@ -98,10 +98,7 @@ server_callback_disconnect(struct ev_loop *loop, ev_io *w, int revents)
 	socket_close(w->fd);
 
 	struct server *server = client->server;
-	if (list_is_singular(&server->clients))
-		INIT_LIST_HEAD(&server->clients);
-	else
-		list_del(&server->clients, &client->list);
+	list_del(&client->list);
 	server->nr_clients--;
 	free(client);
 }

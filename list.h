@@ -79,10 +79,21 @@ static inline void list_add_tail(struct list_head *new, struct list_head *head)
  * This is only for internal list manipulation where we know
  * the prev/next entries already!
  */
-static inline void list_del(struct list_head * prev, struct list_head * next)
+static inline void __list_del(struct list_head * prev, struct list_head * next)
 {
         next->prev = prev;
         prev->next = next;
+}
+
+/**
+ * list_del - deletes entry from list.
+ * @entry: the element to delete from the list.
+ * Note: list_empty() on entry does not return true after this, the entry is
+ * in an undefined state.
+ */
+static inline void list_del(struct list_head *entry)
+{
+        __list_del(entry->prev, entry->next);
 }
 
 /**
