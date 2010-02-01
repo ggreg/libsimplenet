@@ -40,7 +40,22 @@ struct server {
         struct sockaddr_in  addr;
 };
 
+/** Allocate and initialize a new `struct server`.
+ * Allocates server->clients and initialize every attribute.
+ * @param max_clients: maximum number of clients. No fixed limit but the memory
+ * available.
+ * @return pointer to an allocated and initialized `struct server`. NULL if an
+ * error happened.
+ * @see server_free().
+ */
 struct server *server_new(uint32_t max_clients);
+
+/** Free a `struct server`.
+ * Free the memory allocated for server and for server->clients. Assert if
+ * server is NULL.
+ * @param server: pointer to an allocated `struct server`.
+ * @see server_new().
+ */
 void server_free(struct server *server);
 
 int server_init(struct server *, server_flags_t);
