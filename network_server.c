@@ -114,11 +114,12 @@ server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 
 	ssize_t n = read(w->fd, buf, 64);
 	if (n == -1) {
-		perror("read");
+		/* LOG read error on client */
+		/* Handle error. Might disconnect. */
 		goto disconnect;
 	}
 	if (n == 0) {
-		printf("finished\n");
+		/* LOG connection closed by client */
 		goto disconnect;
 	}
 	buf[n] = '\0';
