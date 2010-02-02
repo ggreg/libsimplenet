@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <stdio.h>
+#include <signal.h>
 #include <syslog.h> /* only for log levels constants */
 
 #include <ev.h>
@@ -62,6 +63,7 @@ static void peer_client_free(struct peer_client *);
 static void server_add_client(struct server *, struct peer_client *);
 static void server_del_client(struct server *, struct peer_client *);
 
+static inline void signal_ignore(int signum) {};
 int
 server_init(struct server *server,
 		struct server_callbacks *callbacks, server_flags_t flags)
@@ -83,6 +85,7 @@ server_init(struct server *server,
 	}
 	server->callbacks.do_request = callbacks->do_request;
 
+	signal(SIGPIPE, signal_ignore);
 	return err;
 
 fail_missing_callback:
