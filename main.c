@@ -57,8 +57,7 @@ main(int argc, char **argv)
 	server_listen(server, host, port, backlog);
 
 fail_server_init:
-	server_free(server);
-	exit(err);
+	server_stop(server, err);
 }
 
 /* vim: ts=8:sw=8:noet

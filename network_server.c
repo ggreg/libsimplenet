@@ -32,6 +32,7 @@
 static void server_callback_accept(struct ev_loop *, ev_io *, int);
 static void server_callback_read(struct ev_loop *, ev_io *, int);
 
+struct server *_server = NULL;
 
 /* Public API */
 
@@ -63,6 +64,34 @@ static void peer_client_free(struct peer_client *);
 static void server_add_client(struct server *, struct peer_client *);
 static void server_del_client(struct server *, struct peer_client *);
 
+int
+server_stop(struct server *server, int err)
+{
+	ev_io_stop(EV_DEFAULT, &server->watcher);
+	ev_unloop(EV_DEFAULT, EVUNLOOP_ALL);
+	struct list_head *pos, *cur;
+	list_for_each_safe(pos, cur, &server->clients) {
+		struct peer_client *client;
+		client = list_entry(cur, struct peer_client, list);
+		peer_client_free(client);
+	}
+	socket_close(server->fd);
+	server_free(server);
+	exit(err);
+}
+
+void
+server_stop_global(void)
+{
+	server_stop(_server, EXIT_SUCCESS);
+}
+
+void
+server_stop_sighandler(int signum)
+{
+	server_stop_global();
+}
+
 static inline void signal_ignore(int signum) {};
 int
 server_init(struct server *server,
@@ -86,6 +115,10 @@ server_init(struct server *server,
 	server->callbacks.do_request = callbacks->do_request;
 
 	signal(SIGPIPE, signal_ignore);
+	signal(SIGTERM, server_stop_sighandler);
+	signal(SIGINT, server_stop_sighandler);
+	_server = server;
+
 	return err;
 
 fail_missing_callback:
