@@ -1,7 +1,7 @@
 R = ar
 CC = gcc
 CFLAGS ?= -g -Wall -Os -fPIC
-LDFLAGS = -L.
+LDFLAGS = -L. -lev
 SHLIB_CFLAGS = -shared
 
 INSTALL_EXEC = install -m 755 -o root -g root
@@ -40,10 +40,10 @@ lib$(NAME).so.$(MAJOR).$(MINOR).$(MICRO): $(OBJS)
 
 
 example: main.o $(OBJS) 
-	$(CC) $(CFLAGS) -o $@ $+ -lev
+	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS)
 
 %.o: %.c %.h
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $< $(LDFLAGS)
 
 
 .PHONY: lib$(NAME).pc
