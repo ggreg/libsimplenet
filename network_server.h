@@ -24,6 +24,10 @@
 #include "list.h"
 #include "buffer.h"
 
+#define LOG_SERVER(server, prio, fmt, args...) \
+	(server)->log(prio, fmt, ##args);
+
+static inline void server_log_null(int prio, const char *fmt, ...) {};
 
 typedef enum {
 	SERVER_NONBLOCKING = O_NONBLOCK
@@ -42,6 +46,18 @@ struct peer_client {
 	int	done_write;
 };
 
+typedef void (*callback_log_t)(int priority, const char *fmt, ...);
+typedef int (*callback_accept_t)(
+		struct server *server, struct peer_client *client, int fd);
+typedef int (*callback_request_t)(struct ev_loop *loop, ev_io *w,
+		struct buffer *bufwrite, struct buffer *bufread, int *done);
+
+struct server_callbacks {
+	callback_log_t	    log;
+	callback_accept_t   accept;
+	callback_request_t  do_request;
+};
+
 struct server {
         ev_io   watcher;
         int     fd;
@@ -49,8 +65,8 @@ struct server {
         uint32_t nr_clients;
 	uint32_t max_clients;
         struct sockaddr_in  addr;
+	struct server_callbacks callbacks;
 };
-
 
 /** Allocate and initialize a new server.
  * Allocate server->clients and initialize every attribute.
@@ -75,7 +91,8 @@ void server_free(struct server *server);
  * @param flags flags to set (see definition of server_flags_t).
  * @return 0 on success, errno value on error.
  */
-int server_init(struct server *server, server_flags_t flags);
+int server_init(struct server *server,
+		struct server_callbacks *callbacks, server_flags_t flags);
 
 /** Listen of the file descriptor.
  * Start the main event loop and listen for incoming connections on the file

@@ -62,7 +62,8 @@ static void server_add_client(struct server *, struct peer_client *);
 static void server_del_client(struct server *, struct peer_client *);
 
 int
-server_init(struct server *server, server_flags_t flags)
+server_init(struct server *server,
+		struct server_callbacks *callbacks, server_flags_t flags)
 {
 	int err = socket_init(&server->fd);
 	if (err) goto fail_socket;
@@ -70,8 +71,20 @@ server_init(struct server *server, server_flags_t flags)
 		err = socket_set_nonblocking(server->fd);
 	if (err) goto fail_socket;
 
+	if (callbacks->log == NULL)
+		server->callbacks.log = server_log_null;
+	else
+		server->callbacks.log = callbacks->log;
+	server->callbacks.accept = callbacks->accept;
+	if (callbacks->do_request == NULL) {
+		err = EINVAL;
+		goto fail_missing_callback;
+	}
+	server->callbacks.do_request = callbacks->do_request;
+
 	return err;
 
+fail_missing_callback:
 fail_socket:
 	socket_close(server->fd);
 	return err;
@@ -145,24 +158,6 @@ server_callback_write(struct ev_loop *loop, ev_io *w, int revents)
 	return ;
 }
 
-/** Simple echo callback.
- *
- */
-static
-void
-client_callback_do_request(struct ev_loop *loop, ev_io *w,
-		struct buffer *bufwrite,
-		struct buffer *bufread,
-		int *done)
-{
-	struct peer_client *client = (struct peer_client *) w;
-	buffer_append(bufwrite,
-			buffer_get_data(bufread), buffer_get_size(bufread));
-	buffer_clear(bufread);
-	*done = 1;
-	ev_io_start(loop, &client->watcher_write);
-}
-
 /** Read data from socket and process _synchronously_.
  * As the socket is configured in non-blocking mode, a read may be interrupted.
  * The callback will resume it later. We need to track the state of the buffer
@@ -196,7 +191,7 @@ server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 			goto disconnect;
 		}
 		buffer_append(client->buffer_read, buf, n);
-		client_callback_do_request(loop, w,
+		client->server->callbacks.do_request(loop, w,
 				client->buffer_write,
 				client->buffer_read,
 				&client->done_read);
@@ -290,7 +285,7 @@ server_del_client(struct server *server, struct peer_client *client)
 
 static
 void
-server_callback_accept(EV_P_ ev_io *w, int revents)
+server_callback_accept(struct ev_loop *loop, ev_io *w, int revents)
 {
 	struct server *server = (struct server *) w;
 	socklen_t socklen = sizeof(server->addr);
@@ -314,7 +309,6 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 	}
 	peer_client_set_addr(client, (struct sockaddr*) &server->addr, socklen);
 
-	/* server_add_client */
 	server_add_client(server, client);
 
 	/* LOG "connection from: %s:%d\n", client->hostname, client->port */
@@ -324,8 +318,8 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 
 	ev_io_init(&client->watcher_write,
 			server_callback_write, fd, EV_WRITE);
-	/* ! server_add_client */
-
+	if (server->callbacks.accept)
+		server->callbacks.accept(server, client, fd);
 	return ;
 }
 
