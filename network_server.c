@@ -125,7 +125,6 @@ server_callback_write(struct ev_loop *loop, ev_io *w, int revents)
 {
 	struct peer_client *client = (struct peer_client *) w;
 	unsigned int bufsz = buffer_get_size(client->buffer_write);
-	printf("bufsz = %d\n", bufsz);
 	if (bufsz == 0) return ;
 	ssize_t n = write(w->fd,
 			buffer_get_data(client->buffer_write),
@@ -196,8 +195,6 @@ server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 			/* LOG connection closed by client */
 			goto disconnect;
 		}
-		printf("[%s:%d] read %ld bytes\n",
-			client->hostname, client->port, n);
 		buffer_append(client->buffer_read, buf, n);
 		client_callback_do_request(loop, w,
 				client->buffer_write,
