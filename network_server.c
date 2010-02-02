@@ -144,11 +144,13 @@ server_callback_write(struct ev_loop *loop, ev_io *w, int revents)
 			buffer_get_data(client->buffer_write),
 			buffer_get_size(client->buffer_write));
 	if (n == -1) {
-		/* LOG write error */
+		LOG_SERVER(client->server, LOG_ERR,
+			"cannot write to socket (%s:%d): %d",
+			client->hostname, client->port, errno);
 		/* Handle error. Might disconnect */
 	}
 	if (n == 0) {
-		/* LOG error */
+		/* LOG partial write? */
 	}
 	buffer_pull(client->buffer_write, n);
 	if (buffer_get_size(client->buffer_write) == 0) {
@@ -181,14 +183,18 @@ server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 	for (;;) {
 		ssize_t n = read(w->fd, buf, bufsz);
 		if (n == -1) {
-			/* LOG read error on client */
-			/* Handle error. Might disconnect. */
 			if (errno == EAGAIN)
 				break;
+			LOG_SERVER(client->server, LOG_ERR,
+				"cannot read socket (%s:%d): %d",
+				client->hostname, client->port, errno);
+			/* Handle error. Might disconnect. */
 			goto disconnect;
 		}
 		if (n == 0) {
-			/* LOG connection closed by client */
+			LOG_SERVER(client->server, LOG_INFO,
+				"remote connection closed (%s:%d)",
+				client->hostname, client->port);
 			goto disconnect;
 		}
 		buffer_append(client->buffer_read, buf, n);
@@ -215,7 +221,8 @@ int peer_client_set_addr(struct peer_client *client,
 			client->hostname, NI_MAXHOST, port, NI_MAXSERV,
 			NI_NUMERICHOST | NI_NUMERICSERV);
 	if (err == -1) {
-		/* LOG cannot getnameinfo() */
+		LOG_SERVER(client->server, LOG_ERR,
+			"getnameinfo failed: %d", errno);
 		return errno;
 	}
 	client->port = atoi(port);
@@ -230,15 +237,22 @@ peer_client_new(struct server *server)
 	if (client == NULL) {
 		return NULL;
 	}
+	int err = 0;
 	client->buffer_read = buffer_new();
 	if (client->buffer_read == NULL) {
-		/* LOG malloc error */
+		err = errno;
+		LOG_SERVER(server, LOG_ERR,
+			"buffer_new error (%s:%d %s)",
+			__FILE__, __LINE__, __func__);
 		goto fail_buffer_read;
 	}
 	client->done_read = 0;
 	client->buffer_write = buffer_new();
 	if (client->buffer_write == NULL) {
-		/* LOG malloc error */
+		err = errno;
+		LOG_SERVER(server, LOG_ERR,
+			"buffer_new error (%s:%d %s)",
+			__FILE__, __LINE__, __func__);
 		goto fail_buffer_write;
 	}
 	client->done_write = 0;
@@ -250,6 +264,7 @@ fail_buffer_write:
 	buffer_free(client->buffer_read);
 fail_buffer_read:
 	free(client);
+	errno = err;
 	return NULL;
 }
 
@@ -258,11 +273,15 @@ void
 peer_client_free(struct peer_client *client)
 {
 	if (buffer_get_size(client->buffer_read)) {
-		/* LOG remaining data in read buffer */
+		LOG_SERVER(client->server, LOG_WARNING,
+			"remaining data in read buffer (%s:%d)",
+			client->hostname, client->port);
 	}
 	buffer_free(client->buffer_read);
 	if (buffer_get_size(client->buffer_write)) {
-		/* LOG remaining unsent data in write buffer */
+		LOG_SERVER(client->server, LOG_WARNING,
+			"remaining unsent data in write buffer (%s:%d)",
+			client->hostname, client->port);
 	}
 	buffer_free(client->buffer_write);
 	free(client);
@@ -292,24 +311,26 @@ server_callback_accept(struct ev_loop *loop, ev_io *w, int revents)
 	socklen_t socklen = sizeof(server->addr);
 	int fd = accept(server->fd, (struct sockaddr *) &server->addr, &socklen);
 	if (fd == -1) {
-		/* LOG accept failed */	
+		LOG_SERVER(server, LOG_ERR, "accept failed: %d", errno);
 		return ;
 	}
 	socket_set_nonblocking(fd);
 
 	if (server->nr_clients == server->max_clients) {
 		socket_close(fd);
-		/* LOG max clients reached */
+		LOG_SERVER(server, LOG_ERR,
+			"max clients (%u) reached", server->max_clients);
 		return ;
 	}
 
 	struct peer_client *client = peer_client_new(server);
 	if (client == NULL) {
-		/* LOG peer_client_new error */
+		LOG_SERVER(server, LOG_ERR,
+			"peer_client_new error (%s:%d %s): %d",
+			__FILE__, __LINE__, __func__, errno);
 		socket_close(fd);
 	}
 	peer_client_set_addr(client, (struct sockaddr*) &server->addr, socklen);
-
 	server_add_client(server, client);
 
 	LOG_SERVER(server, LOG_INFO,
