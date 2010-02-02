@@ -170,8 +170,8 @@ client_callback_do_request(struct ev_loop *loop, ev_io *w,
  * The read loop appends data to `client->buffer_read`. Then it calls
  * client_callback_do_request(client) to process the request.
  * If the request was full, the callback fills `client->buffer_write`, resets
- * `client->buffer_read` and sets `client->done` to 1. Otherwise,
- * `client->done` is still 0 and the runtime iterates again in the read loop.
+ * `client->buffer_read` and sets `client->done_read` to 1. Otherwise,
+ * `client->done_read` is still 0 and the runtime iterates again in the read loop.
  * As the loop fills `client->buffer_read`, the client_callback_do_request()
  * may find messages boundaries and finally fills the response buffer.
  */
