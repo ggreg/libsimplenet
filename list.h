@@ -9,7 +9,8 @@
  *       Revision:  none
  *       Compiler:  gcc
  *
- *         Author:  Greg Leclercq (ggl), ggl@0x80.net 
+ *         Author:  Linux kernel developers
+ *                  (shorten by Greg Leclercq (ggl), ggl@0x80.net)
  */
 
 #ifndef _LIST_H_
