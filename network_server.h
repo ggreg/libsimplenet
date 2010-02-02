@@ -8,7 +8,7 @@
  *       Revision:  none
  *       Compiler:  gcc
  *
- *         Author:  Greg Leclercq (ggl), ggl@0x80.net 
+ *         Author:  Greg Leclercq (ggl), ggl@0x80.net
  *
  */
 
@@ -52,9 +52,9 @@ struct server {
 };
 
 
-/** Allocate and initialize a new `struct server`.
- * Allocates server->clients and initialize every attribute.
- * @param max_clients: maximum number of clients. No fixed limit but the memory
+/** Allocate and initialize a new server.
+ * Allocate server->clients and initialize every attribute.
+ * @param max_clients maximum number of clients. No fixed limit but the memory
  * available.
  * @return pointer to an allocated and initialized `struct server`. NULL if an
  * error happened.
@@ -62,16 +62,33 @@ struct server {
  */
 struct server *server_new(uint32_t max_clients);
 
-/** Free a `struct server`.
+/** Free a server.
  * Free the memory allocated for server and for server->clients. Assert if
  * server is NULL.
- * @param server: pointer to an allocated `struct server`.
+ * @param server pointer to an allocated `struct server`.
  * @see server_new().
  */
 void server_free(struct server *server);
 
-int server_init(struct server *, server_flags_t);
-int server_listen(struct server *, const char *, int, int);
+/** Initialize the file descriptor of a server.
+ * @param server pointer to the server to initialize.
+ * @param flags flags to set (see definition of server_flags_t).
+ * @return 0 on success, errno value on error.
+ */
+int server_init(struct server *server, server_flags_t flags);
+
+/** Listen of the file descriptor.
+ * Start the main event loop and listen for incoming connections on the file
+ * descriptor.
+ * @param server pointer to the server that will listen.
+ * @param host address to listen on.
+ * @param port service to listen on.
+ * @param backlog maximum number of requests to queue in socket backlog.
+ * @return 0 on success, errno value on error.
+ */
+int server_listen(struct server *server,
+		const char *host, int port, int backlog);
+
 
 #endif
 
