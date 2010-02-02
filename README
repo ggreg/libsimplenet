@@ -1,5 +1,7 @@
 libsimplenet is a simple network library on top of libev.
 
-At the moment, it is written and tested on linux amd64. This first version is
-more a example that a usable library. The next version will allow to define
-custom callback for request processing and logging.
+At the moment, it is written and tested on linux amd64. This version supports
+custom callbacks for logging, client negotiation after accept(), and request
+processing.
+
+Currently it only supports IPv4 and no custom structures (work in progress).
