@@ -25,7 +25,7 @@
 #include "buffer.h"
 
 #define LOG_SERVER(server, prio, fmt, args...) \
-	(server)->log(prio, fmt, ##args);
+	(server)->callbacks.log(prio, fmt, ##args);
 
 static inline void server_log_null(int prio, const char *fmt, ...) {};
 

@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <stdio.h>
+#include <syslog.h> /* only for log levels constants */
 
 #include <ev.h>
 
@@ -311,7 +312,8 @@ server_callback_accept(struct ev_loop *loop, ev_io *w, int revents)
 
 	server_add_client(server, client);
 
-	/* LOG "connection from: %s:%d\n", client->hostname, client->port */
+	LOG_SERVER(server, LOG_INFO,
+		"connection from: %s:%d\n", client->hostname, client->port);
 	ev_io_init(&client->watcher_read,
 			server_callback_read, fd, EV_READ);
 	ev_io_start(loop, &client->watcher_read);
