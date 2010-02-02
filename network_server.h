@@ -22,6 +22,7 @@
 #include <ev.h>
 
 #include "list.h"
+#include "buffer.h"
 
 
 typedef enum {
@@ -29,11 +30,16 @@ typedef enum {
 } server_flags_t;
 
 struct peer_client {
-        ev_io   watcher;
+	ev_io   watcher_read;
+	ev_io	watcher_write;
 	struct server *server;
 	struct list_head list;
         char    hostname[NI_MAXHOST]; /* NI_MAXHOST = 1025 */
         int     port;
+	struct buffer	*buffer_read;
+	struct buffer	*buffer_write;
+	int	done_read;
+	int	done_write;
 };
 
 struct server {
