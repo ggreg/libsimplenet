@@ -27,8 +27,8 @@
 #include "network_server.h"
 
 
-static void server_callback_accept(EV_P_ ev_io *w, int revents);
-static void server_callback_read(EV_P_ ev_io *w, int revents);
+static void server_callback_accept(struct ev_loop *, ev_io *, int);
+static void server_callback_read(struct ev_loop *, ev_io *, int);
 
 
 /* Public API */
@@ -55,6 +55,11 @@ server_free(struct server *server)
 	assert(server != NULL);
 	free(server);
 }
+
+static struct peer_client *peer_client_new(struct server *);
+static void peer_client_free(struct peer_client *);
+static void server_add_client(struct server *, struct peer_client *);
+static void server_del_client(struct server *, struct peer_client *);
 
 int
 server_init(struct server *server, server_flags_t flags)
@@ -99,21 +104,10 @@ server_callback_disconnect(struct ev_loop *loop, ev_io *w, int revents)
 	ev_io_stop(loop, &client->watcher_write);
 	socket_close(w->fd);
 
-	/* remove from clients list */
 	struct server *server = client->server;
-	list_del(&client->list);
-	server->nr_clients--;
+	server_del_client(server, client);
 
-	/* peer_client_free */
-	if (buffer_get_size(client->buffer_read)) {
-		/* LOG remaining data in read buffer */
-	}
-	buffer_free(client->buffer_read);
-	if (buffer_get_size(client->buffer_write)) {
-		/* LOG remaining unsent data in write buffer */
-	}
-	buffer_free(client->buffer_write);
-	free(client);
+	peer_client_free(client);
 }
 
 /** Write response stored in client->buffer_write.
@@ -219,6 +213,83 @@ disconnect:
 	server_callback_disconnect(loop, w, revents);
 }
 
+static
+int peer_client_set_addr(struct peer_client *client,
+		struct sockaddr *addr, socklen_t socklen)
+{
+	char port[NI_MAXSERV]; /* size = 32 */
+	int err = getnameinfo(addr, socklen,
+			client->hostname, NI_MAXHOST, port, NI_MAXSERV,
+			NI_NUMERICHOST | NI_NUMERICSERV);
+	if (err == -1) {
+		/* LOG cannot getnameinfo() */
+		return errno;
+	}
+	client->port = atoi(port);
+	return 0;
+}
+
+static
+struct peer_client *
+peer_client_new(struct server *server)
+{
+	struct peer_client *client = malloc(sizeof(*client));
+	if (client == NULL) {
+		return NULL;
+	}
+	client->buffer_read = buffer_new();
+	if (client->buffer_read == NULL) {
+		/* LOG malloc error */
+		goto fail_buffer_read;
+	}
+	client->done_read = 0;
+	client->buffer_write = buffer_new();
+	if (client->buffer_write == NULL) {
+		/* LOG malloc error */
+		goto fail_buffer_write;
+	}
+	client->done_write = 0;
+	client->server = server;
+	INIT_LIST_HEAD(&client->list);
+
+	return client;
+fail_buffer_write:
+	buffer_free(client->buffer_read);
+fail_buffer_read:
+	free(client);
+	return NULL;
+}
+
+static
+void
+peer_client_free(struct peer_client *client)
+{
+	if (buffer_get_size(client->buffer_read)) {
+		/* LOG remaining data in read buffer */
+	}
+	buffer_free(client->buffer_read);
+	if (buffer_get_size(client->buffer_write)) {
+		/* LOG remaining unsent data in write buffer */
+	}
+	buffer_free(client->buffer_write);
+	free(client);
+}
+
+static
+void
+server_add_client(struct server *server, struct peer_client *client)
+{
+	list_add(&client->list, &server->clients);
+	server->nr_clients++;
+}
+
+static
+void
+server_del_client(struct server *server, struct peer_client *client)
+{
+	list_del(&client->list);
+	server->nr_clients--;
+}
 
 static
 void
@@ -239,42 +310,15 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 		return ;
 	}
 
-	/* peer_client_new */
-	struct peer_client *client = malloc(sizeof(*client));
+	struct peer_client *client = peer_client_new(server);
 	if (client == NULL) {
-		/* LOG malloc error */
+		/* LOG peer_client_new error */
 		socket_close(fd);
-		return ;
 	}
-	client->buffer_read = buffer_new();
-	if (client->buffer_read == NULL) {
-		/* LOG malloc error */
-		goto fail_buffer_read;
-	}
-	client->done_read = 0;
-	client->buffer_write = buffer_new();
-	if (client->buffer_write == NULL) {
-		/* LOG malloc error */
-		goto fail_buffer_write;
-	}
-	client->done_write = 0;
-
-	char port[NI_MAXSERV]; /* size = 32 */
-	int err = getnameinfo((struct sockaddr *) &server->addr, socklen,
-			client->hostname, NI_MAXHOST, port, NI_MAXSERV,
-			NI_NUMERICHOST | NI_NUMERICSERV);
-	if (err == -1) {
-		/* LOG cannot getnameinfo() */
-		return ;
-	}
-	client->port = atoi(port);
-	client->server = server;
-	INIT_LIST_HEAD(&client->list);
-	/* ! peer_client_new */
+	peer_client_set_addr(client, (struct sockaddr*) &server->addr, socklen);
 
 	/* server_add_client */
-	list_add(&client->list, &server->clients);
-	server->nr_clients++;
+	server_add_client(server, client);
 
 	/* LOG "connection from: %s:%d\n", client->hostname, client->port */
 	ev_io_init(&client->watcher_read,
@@ -286,10 +330,6 @@ server_callback_accept(EV_P_ ev_io *w, int revents)
 	/* ! server_add_client */
 
 	return ;
-fail_buffer_write:
-	buffer_free(client->buffer_read);
-fail_buffer_read:
-	free(client);
 }
 
 
