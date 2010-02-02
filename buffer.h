@@ -19,10 +19,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include <gbd-compat.h>
-
-
-#define GBD_BUFFER_CHUNK_SIZE 4096
+#define BUFFER_CHUNK_SIZE 4096
 
 
 struct buffer {
@@ -42,7 +39,7 @@ buffer_new(void)
 	if (!buf)
 		return NULL;
 
-	buf->chunk_size = GBD_BUFFER_CHUNK_SIZE;
+	buf->chunk_size = BUFFER_CHUNK_SIZE;
 	buf->max_size = buf->chunk_size;
 	buf->base = malloc(buf->max_size);
 	if (!buf->base)
