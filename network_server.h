@@ -66,6 +66,7 @@ struct server {
 	uint32_t max_clients;
         struct sockaddr_in  addr;
 	struct server_callbacks callbacks;
+	void *prv;
 };
 
 /** Allocate and initialize a new server.
@@ -105,6 +106,12 @@ int server_init(struct server *server,
  */
 int server_listen(struct server *server,
 		const char *host, int port, int backlog);
+
+/** Stop a server and clean internal structures.
+ * @param server pointer to the server to stop.
+ * @param err error code to return at exit.
+ */
+int server_stop(struct server *server, int err);
 
 
 #endif
