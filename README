@@ -4,6 +4,6 @@ At the moment, it is written and tested on linux amd64. This version supports
 custom callbacks for logging, client negotiation after accept(), and request
 processing.
 
-Currently it only supports IPv4 and no custom structures (work in progress).
+Currently it only supports IPv4.
 
 It is not the role of this library to handle configuration and daemonization.
