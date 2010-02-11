@@ -18,6 +18,8 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 
 #include <errno.h>
 #include <assert.h>
@@ -55,6 +57,18 @@ socket_set_nonblocking(int fd)
 	int err = fcntl(fd, F_SETFL, O_NONBLOCK);
 	if (err == -1)
 		return errno;
+	return 0;
+}
+
+
+
+int
+socket_set_tcpnodelay(int fd)
+{
+	int optval = 1;
+	socklen_t optlen = sizeof(optval);
+	int err = setsockopt(fd, SOL_SOCKET, TCP_NODELAY, &optval, optlen);
+	if (err == -1) return errno;
 	return 0;
 }
 

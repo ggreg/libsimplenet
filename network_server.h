@@ -32,7 +32,8 @@
 static inline void server_log_null(int prio, const char *fmt, ...) {};
 
 typedef enum {
-	SERVER_NONBLOCKING = O_NONBLOCK
+	SERVER_NONBLOCKING = O_NONBLOCK,
+	SERVER_TCPNODELAY = TCP_NODELAY	
 } server_flags_t;
 
 struct peer_client {

@@ -24,6 +24,7 @@
 
 int socket_init(int *fd);
 int socket_set_nonblocking(int fd);
+int socket_set_tcpnodelay(int fd);
 int socket_listen(int fd, struct sockaddr_in *addr,
 		const char *host, int port, int backlog);
 int socket_close(int fd);
