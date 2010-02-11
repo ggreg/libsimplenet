@@ -42,7 +42,7 @@ lib$(NAME).so.$(MAJOR).$(MINOR).$(MICRO): $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,-soname -Wl,lib$(NAME).so.$(MAJOR).$(MINOR).$(MICRO) $(SHLIB_CFLAGS) -o $@ $^
 
 
-example: main.o $(OBJS) 
+example: example.o $(OBJS) 
 	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS)
 
 %.o: %.c %.h
