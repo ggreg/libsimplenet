@@ -68,16 +68,19 @@ static void server_del_client(struct server *, struct peer_client *);
 int
 server_stop(struct server *server, int err)
 {
-	ev_io_stop(EV_DEFAULT, &server->watcher);
-	ev_unloop(EV_DEFAULT, EVUNLOOP_ALL);
 	struct list_head *pos, *cur;
 	list_for_each_safe(pos, cur, &server->clients) {
 		struct peer_client *client;
 		client = list_entry(cur, struct peer_client, list);
+		ev_io_stop(EV_DEFAULT, &client->watcher_read);
+		ev_io_stop(EV_DEFAULT, &client->watcher_write);
+		socket_close(client->watcher_read.fd);
+		server_del_client(client->server, client);
 		peer_client_free(client);
 	}
 	socket_close(server->fd);
 	server_free(server);
+	ev_unloop(EV_DEFAULT, EVUNLOOP_ALL);
 	exit(err);
 }
 
