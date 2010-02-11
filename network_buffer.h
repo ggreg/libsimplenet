@@ -110,16 +110,13 @@ simple_buffer_get_userptr(struct simple_buffer *buf)
 
 static inline
 int
-simple_buffer_append(struct simple_buffer * const buf,
-		const char * const data,
-		const size_t data_len)
+simple_buffer_resize(struct simple_buffer * const buf, size_t newsize)
 {
-	assert(buf != NULL);
-	if (buf->tail > buf->data + buf->max_size - data_len) {
+	if (newsize != buf->max_size) {
 		uint64_t head_offset = buf->head - buf->data;
 		uint64_t tail_offset = buf->tail - buf->data;
 		uint64_t userptr_offset = buf->userptr - buf->data;
-		buf->max_size += (data_len/buf->chunk_size + 1) * buf->chunk_size;
+		buf->max_size = (newsize/buf->chunk_size+1) * buf->chunk_size;
 		char *newbufdata = realloc(buf->data, buf->max_size);
 		if (newbufdata == NULL)
 			return errno;
@@ -127,6 +124,20 @@ simple_buffer_append(struct simple_buffer * const buf,
 		buf->head = buf->data + head_offset;
 		buf->tail = buf->data + tail_offset;
 		buf->userptr = buf->data + userptr_offset;
+	}
+	return 0;
+}
+
+static inline
+int
+simple_buffer_append(struct simple_buffer * const buf,
+		const char * const data,
+		const size_t data_len)
+{
+	assert(buf != NULL);
+	if (buf->tail > buf->data + buf->max_size - data_len) {
+		int err = simple_buffer_resize(buf, buf->max_size+data_len);
+		if (err) return err;
 	}
 	memcpy(buf->tail, (char *) data, data_len);
 	buf->tail += data_len;
@@ -180,6 +191,17 @@ simple_buffer_move_userptr(struct simple_buffer * const buf, uint32_t len)
 
 static inline
 int
+simple_buffer_rewind(struct simple_buffer * const buf)
+{
+	buf->head = buf->data;
+	buf->tail = buf->head;
+	buf->userptr = buf->head;
+	buf->size = 0;
+	return 0;
+}
+
+static inline
+int
 simple_buffer_clear(struct simple_buffer * const buf)
 {
 	if (buf->max_size > buf->chunk_size) {
@@ -187,11 +209,7 @@ simple_buffer_clear(struct simple_buffer * const buf)
 		if (buf->data == NULL) return errno;
 		buf->max_size = buf->chunk_size;
 	}
-	buf->head = buf->data;
-	buf->tail = buf->head;
-	buf->userptr = buf->head;
-	buf->size = 0; 
-	return 0;
+	return simple_buffer_rewind(buf);
 }
 
 
