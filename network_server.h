@@ -17,12 +17,13 @@
 
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 
 #include <ev.h>
 
-#include "list.h"
-#include "buffer.h"
+#include "network_list.h"
+#include "network_buffer.h"
 
 #define LOG_SERVER(server, prio, fmt, args...) \
 	(server)->callbacks.log(prio, fmt, ##args);
@@ -40,8 +41,8 @@ struct peer_client {
 	struct list_head list;
         char    hostname[NI_MAXHOST]; /* NI_MAXHOST = 1025 */
         int     port;
-	struct buffer	*buffer_read;
-	struct buffer	*buffer_write;
+	struct simple_buffer	*buffer_read;
+	struct simple_buffer	*buffer_write;
 	int	done_read;
 	int	done_write;
 };
@@ -50,7 +51,7 @@ typedef void (*callback_log_t)(int priority, const char *fmt, ...);
 typedef int (*callback_accept_t)(
 		struct server *server, struct peer_client *client, int fd);
 typedef int (*callback_request_t)(struct ev_loop *loop, ev_io *w,
-		struct buffer *bufwrite, struct buffer *bufread, int *done);
+		struct simple_buffer *bufwrite, struct simple_buffer *bufread, int *done);
 
 struct server_callbacks {
 	callback_log_t	    log;

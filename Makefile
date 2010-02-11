@@ -1,6 +1,6 @@
 R = ar
 CC = gcc
-CFLAGS ?= -g -Wall -Os -fPIC
+CFLAGS ?= -g -Wall -fPIC
 LDFLAGS = -L. -lev
 SHLIB_CFLAGS = -shared
 
@@ -9,6 +9,8 @@ INSTALL_DATA = install -m 644 -o root -g root
 
 NAME = simplenet
 OBJS = network_socket.o network_server.o
+HEADERS = network_server.h network_socket.h network_list.h network_buffer.h\
+container_of.h
 MAJOR = 0
 MINOR = 1
 MICRO = 0
@@ -16,6 +18,7 @@ MICRO = 0
 A_TARGETS = lib$(NAME).a
 SO_TARGETS = lib$(NAME).so lib$(NAME).so.$(MAJOR) lib$(NAME).so.$(MAJOR).$(MINOR) lib$(NAME).so.$(MAJOR).$(MINOR).$(MICRO)
 BIN_TARGETS = example
+PC_TARGET = lib$(NAME).pc
 
 PREFIX ?=
 
@@ -58,7 +61,7 @@ install-lib: $(SO_TARGETS) $(A_TARGETS) $(PC_TARGET)
 	mkdir -p $(PREFIX)/usr/lib/pkgconfig
 	$(INSTALL_DATA) -t $(PREFIX)/usr/lib/pkgconfig $(PC_TARGET)
 	mkdir -p $(PREFIX)/usr/include
-	$(INSTALL_DATA) -t $(PREFIX)/usr/include $(NAME).h
+	$(INSTALL_DATA) -t $(PREFIX)/usr/include $(HEADERS)
 	mkdir -p $(PREFIX)/usr/lib
 	$(INSTALL_EXEC) -t $(PREFIX)/usr/lib $(SO_TARGETS) $(A_TARGETS)
 

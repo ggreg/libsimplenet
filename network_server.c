@@ -23,8 +23,8 @@
 
 #include <ev.h>
 
-#include "list.h"
-#include "buffer.h"
+#include "network_list.h"
+#include "network_buffer.h"
 #include "network_socket.h"
 #include "network_server.h"
 
@@ -173,24 +173,32 @@ static
 void
 server_callback_write(struct ev_loop *loop, ev_io *w, int revents)
 {
-	struct peer_client *client = (struct peer_client *) w;
-	unsigned int bufsz = buffer_get_size(client->buffer_write);
+	struct peer_client *client =
+		container_of(w, struct peer_client, watcher_write);
+	unsigned int bufsz =
+		simple_buffer_size(client->buffer_write);
 	if (bufsz == 0) return ;
 	ssize_t n = write(w->fd,
-			buffer_get_data(client->buffer_write),
-			buffer_get_size(client->buffer_write));
+			simple_buffer_get_head(client->buffer_write),
+			bufsz);
 	if (n == -1) {
+		if (errno == EAGAIN)
+			return ;
 		LOG_SERVER(client->server, LOG_ERR,
 			"cannot write to socket (%s:%d): %d",
 			client->hostname, client->port, errno);
 		/* Handle error. Might disconnect */
+		simple_buffer_clear(client->buffer_write);
+		ev_io_stop(loop, &client->watcher_write);
+		return ;
 	}
 	if (n == 0) {
+		return ;
 		/* LOG partial write? */
 	}
-	buffer_pull(client->buffer_write, n);
-	if (buffer_get_size(client->buffer_write) == 0) {
-		buffer_clear(client->buffer_write);
+	simple_buffer_pull(client->buffer_write, n);
+	if (simple_buffer_size(client->buffer_write) == 0) {
+		simple_buffer_clear(client->buffer_write);
 		ev_io_stop(loop, &client->watcher_write);
 	}
 
@@ -213,9 +221,10 @@ static
 void
 server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 {
-	const unsigned int bufsz = 1024;
+	struct peer_client *client =
+		container_of(w, struct peer_client, watcher_read);
+	const unsigned int bufsz = client->buffer_read->chunk_size;
 	char buf[bufsz];
-	struct peer_client *client = (struct peer_client *) w;
 	for (;;) {
 		ssize_t n = read(w->fd, buf, bufsz);
 		if (n == -1) {
@@ -233,13 +242,24 @@ server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 				client->hostname, client->port);
 			goto disconnect;
 		}
-		buffer_append(client->buffer_read, buf, n);
-		client->server->callbacks.do_request(loop, w,
-				client->buffer_write,
-				client->buffer_read,
-				&client->done_read);
-		if (client->done_read)
-			server_callback_write(loop, w, revents);
+		simple_buffer_append(client->buffer_read, buf, n);
+		for (;;) {
+			int err = client->server->callbacks.do_request(loop, w,
+					client->buffer_write,
+					client->buffer_read,
+					&client->done_read);
+			if (client->done_read) {
+				ev_io_start(loop, &client->watcher_write);
+				client->done_read = 0;
+			}
+			if (err == EAGAIN)
+				break;
+			if (err) {
+				LOG_SERVER(client->server, LOG_ERR,
+					"error: %s\n", strerror(err));
+				break;
+			}
+		}
 	}
 
 	return ;
@@ -274,7 +294,7 @@ peer_client_new(struct server *server)
 		return NULL;
 	}
 	int err = 0;
-	client->buffer_read = buffer_new();
+	client->buffer_read = simple_buffer_new();
 	if (client->buffer_read == NULL) {
 		err = errno;
 		LOG_SERVER(server, LOG_ERR,
@@ -283,7 +303,7 @@ peer_client_new(struct server *server)
 		goto fail_buffer_read;
 	}
 	client->done_read = 0;
-	client->buffer_write = buffer_new();
+	client->buffer_write = simple_buffer_new();
 	if (client->buffer_write == NULL) {
 		err = errno;
 		LOG_SERVER(server, LOG_ERR,
@@ -297,7 +317,7 @@ peer_client_new(struct server *server)
 
 	return client;
 fail_buffer_write:
-	buffer_free(client->buffer_read);
+	simple_buffer_free(client->buffer_read);
 fail_buffer_read:
 	free(client);
 	errno = err;
@@ -308,18 +328,22 @@ static
 void
 peer_client_free(struct peer_client *client)
 {
-	if (buffer_get_size(client->buffer_read)) {
-		LOG_SERVER(client->server, LOG_WARNING,
-			"remaining data in read buffer (%s:%d)",
-			client->hostname, client->port);
+	if (client->buffer_read) {
+		if (simple_buffer_size(client->buffer_read)) {
+			LOG_SERVER(client->server, LOG_WARNING,
+				"remaining data in read buffer (%s:%d)",
+				client->hostname, client->port);
+		}
+		simple_buffer_free(client->buffer_read);
 	}
-	buffer_free(client->buffer_read);
-	if (buffer_get_size(client->buffer_write)) {
-		LOG_SERVER(client->server, LOG_WARNING,
-			"remaining unsent data in write buffer (%s:%d)",
-			client->hostname, client->port);
+	if (client->buffer_write) {
+		if (simple_buffer_size(client->buffer_write)) {
+			LOG_SERVER(client->server, LOG_WARNING,
+				"remaining unsent data in write buffer (%s:%d)",
+				client->hostname, client->port);
+		}
+		simple_buffer_free(client->buffer_write);
 	}
-	buffer_free(client->buffer_write);
 	free(client);
 }
 

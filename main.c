@@ -18,21 +18,25 @@
 
 #include "network_server.h"
 
+
 /** Simple echo callback.
  *
  */
-void
+int
 client_callback_do_request(struct ev_loop *loop, ev_io *w,
-		struct buffer *bufwrite,
-		struct buffer *bufread,
+		struct simple_buffer *bufwrite,
+		struct simple_buffer *bufread,
 		int *done)
 {
 	struct peer_client *client = (struct peer_client *) w;
-	buffer_append(bufwrite,
-			buffer_get_data(bufread), buffer_get_size(bufread));
-	buffer_clear(bufread);
+	char *data = client->server->prv;
+	simple_buffer_append(bufwrite, data, strlen(data));
+	simple_buffer_append(bufwrite,
+			simple_buffer_get_data(bufread),
+			simple_buffer_size(bufread));
+	simple_buffer_clear(bufread);
 	*done = 1;
-	ev_io_start(loop, &client->watcher_write);
+	return 0;
 }
 
 int
@@ -52,12 +56,14 @@ main(int argc, char **argv)
 		.do_request = client_callback_do_request
 	};
 
+	server->prv = "hello, ";
 	int err = server_init(server, &callbacks, SERVER_NONBLOCKING);
 	if (err) goto fail_server_init;
 	server_listen(server, host, port, backlog);
 
 fail_server_init:
 	server_stop(server, err);
+	exit(err);
 }
 
 /* vim: ts=8:sw=8:noet
