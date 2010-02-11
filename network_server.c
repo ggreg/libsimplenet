@@ -160,10 +160,7 @@ server_callback_disconnect(struct ev_loop *loop, ev_io *w, int revents)
 	ev_io_stop(loop, &client->watcher_read);
 	ev_io_stop(loop, &client->watcher_write);
 	socket_close(w->fd);
-
-	struct server *server = client->server;
-	server_del_client(server, client);
-
+	server_del_client(client->server, client);
 	peer_client_free(client);
 }
 
@@ -240,7 +237,7 @@ server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 			LOG_SERVER(client->server, LOG_ERR,
 				"cannot read socket (%s:%d): %d",
 				client->hostname, client->port, errno);
-			/* Handle error. Might disconnect. */
+			/* XXX: Handle error */
 			goto disconnect;
 		}
 		if (n == 0) {
@@ -337,6 +334,7 @@ static
 void
 peer_client_free(struct peer_client *client)
 {
+	assert(client != NULL);
 	if (client->buffer_read) {
 		if (simple_buffer_size(client->buffer_read)) {
 			LOG_SERVER(client->server, LOG_WARNING,
@@ -408,6 +406,9 @@ server_callback_accept(struct ev_loop *loop, ev_io *w, int revents)
 			server_callback_read, fd, EV_READ);
 	ev_io_start(loop, &client->watcher_read);
 
+	/* Init-only watcher_write. It will be started when data are
+	 * available in client->buffer_write.
+	 */
 	ev_io_init(&client->watcher_write,
 			server_callback_write, fd, EV_WRITE);
 	if (server->callbacks.accept)
