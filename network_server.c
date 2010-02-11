@@ -261,6 +261,8 @@ server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 			}
 			if (err == EAGAIN)
 				break;
+			if (simple_buffer_size(client->buffer_read) == 0)
+				break;
 			if (err) {
 				LOG_SERVER(client->server, LOG_ERR,
 					"error: %s\n", strerror(err));
