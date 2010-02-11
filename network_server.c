@@ -103,6 +103,9 @@ server_init(struct server *server,
 	if (flags & SERVER_NONBLOCKING)
 		err = socket_set_nonblocking(server->fd);
 	if (err) goto fail_socket;
+	if (flags & SERVER_TCPNODELAY)
+		err = socket_set_tcpnodelay(server->fd);
+	if (err) goto fail_socket;
 
 	if (callbacks->log == NULL)
 		server->callbacks.log = server_log_null;
