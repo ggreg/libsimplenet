@@ -1,15 +1,16 @@
 /*
- *       Filename:  main.c
+ * This file is part of libsimplenet.
  *
- *    Description:  
+ * Copyright (C) 2010 Greg Leclercq <ggl@0x80.net> 
  *
- *        Version:  0.1
- *        Created:  09/29/2009 02:29:14 PM
- *       Revision:  none
- *       Compiler:  gcc
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; version 2.1 or version 3.0 only.
  *
- *         Author:  Greg Leclercq (ggl), ggl@0x80.net 
- *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  */
 
 #include <stdlib.h>
