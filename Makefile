@@ -72,5 +72,5 @@ install-bin: $(BIN_TARGETS)
 install: install-lib install-bin
 
 clean:
-	rm -f *.o $(TARGETS)
+	rm -f *.o $(TARGETS) core
 
