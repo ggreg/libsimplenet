@@ -71,7 +71,7 @@ server_stop(struct server *server, int err)
 	struct list_head *pos, *cur;
 	list_for_each_safe(pos, cur, &server->clients) {
 		struct peer_client *client;
-		client = list_entry(cur, struct peer_client, list);
+		client = list_entry(pos, struct peer_client, list);
 		ev_io_stop(EV_DEFAULT, &client->watcher_read);
 		ev_io_stop(EV_DEFAULT, &client->watcher_write);
 		socket_close(client->watcher_read.fd);
