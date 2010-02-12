@@ -103,6 +103,13 @@ simple_buffer_get_head(struct simple_buffer *buf)
 
 static inline
 char *
+simple_buffer_get_tail(struct simple_buffer *buf)
+{
+	return buf->tail;
+}
+
+static inline
+char *
 simple_buffer_get_userptr(struct simple_buffer *buf)
 {
 	return buf->userptr;
@@ -124,6 +131,20 @@ simple_buffer_resize(struct simple_buffer * const buf, size_t newsize)
 		buf->head = buf->data + head_offset;
 		buf->tail = buf->data + tail_offset;
 		buf->userptr = buf->data + userptr_offset;
+	}
+	return 0;
+}
+
+static inline
+int
+simple_buffer_resize_tail(struct simple_buffer *buf, size_t newsize)
+{
+	size_t tailsize = buf->data+buf->max_size-buf->tail;
+	if (newsize != tailsize) {
+		size_t data_to_tail = buf->tail-buf->data;
+		int err;
+		err = simple_buffer_resize(buf, data_to_tail+newsize);
+		return err;
 	}
 	return 0;
 }
@@ -186,6 +207,18 @@ simple_buffer_move_userptr(struct simple_buffer * const buf, uint32_t len)
 	if (len > buf->size)
 		len = buf->size;
 	buf->userptr += len;
+	return len;
+}
+
+static inline
+uint32_t
+simple_buffer_move_tail(struct simple_buffer *buf, uint32_t len)
+{
+	uint32_t tailsize = buf->data-buf->tail+buf->max_size;
+	if (len > tailsize)
+		len = tailsize;
+	buf->tail += len;
+	buf->size += len;
 	return len;
 }
 
