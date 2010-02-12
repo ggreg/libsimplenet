@@ -1,6 +1,6 @@
 R = ar
 CC = gcc
-CFLAGS ?= -g -Wall -fPIC
+CFLAGS ?= -g -O2 -Wall -fPIC
 LDFLAGS = -L. -lev
 SHLIB_CFLAGS = -shared
 
