@@ -300,7 +300,7 @@ peer_client_new(struct server *server)
 		return NULL;
 	}
 	int err = 0;
-	client->buffer_read = simple_buffer_new();
+	client->buffer_read = simple_buffer_new(16*getpagesize());
 	if (client->buffer_read == NULL) {
 		err = errno;
 		LOG_SERVER(server, LOG_ERR,
@@ -309,7 +309,7 @@ peer_client_new(struct server *server)
 		goto fail_buffer_read;
 	}
 	client->done_read = 0;
-	client->buffer_write = simple_buffer_new();
+	client->buffer_write = simple_buffer_new(16*getpagesize());
 	if (client->buffer_write == NULL) {
 		err = errno;
 		LOG_SERVER(server, LOG_ERR,

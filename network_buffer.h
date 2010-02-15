@@ -44,11 +44,11 @@ struct simple_buffer {
 
 static inline
 struct simple_buffer *
-simple_buffer_new(void)
+simple_buffer_new(uint32_t chunk_size)
 {
 	struct simple_buffer *buf = malloc(sizeof(*buf));
 	if (buf == NULL) return NULL;
-	buf->chunk_size = getpagesize();
+	buf->chunk_size = chunk_size;
 	buf->max_size = buf->chunk_size;
 	buf->data = malloc(buf->max_size);
 	if (buf->data == NULL) goto fail_data;
