@@ -19,6 +19,9 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#ifndef __USE_MISC
+# define __USE_MISC
+#endif
 #include <netdb.h>
 
 #include <ev.h>
