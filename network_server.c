@@ -263,6 +263,8 @@ server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 				ev_io_start(loop, &client->watcher_write);
 				client->done_read = 0;
 			}
+			if (err == ECONNABORTED)
+				goto disconnect;
 			if (err == EAGAIN)
 				break;
 			if (simple_buffer_size(client->buffer_read) == 0)
