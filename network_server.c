@@ -101,7 +101,13 @@ int
 server_init(struct server *server,
 		struct server_callbacks *callbacks, server_flags_t flags)
 {
-	int err = socket_init(&server->fd);
+	int err;
+	server->fd = socket_tcp();
+	if (server->fd == -1) {
+		err = errno;
+		goto fail_socket;
+	}
+	err = socket_init(server->fd);
 	if (err) goto fail_socket;
 	if (flags & SERVER_NONBLOCKING)
 		err = socket_set_nonblocking(server->fd);
@@ -137,12 +143,13 @@ fail_socket:
 int
 server_listen(struct server *server, const char *host, int port, int backlog)
 {
-	int err = socket_listen(server->fd, &server->addr, host, port, backlog);
+	int err = socket_listen_tcp(server->fd, &server->addr, host, port, backlog);
 	if (err)
 		return err;
 
 	struct ev_loop *loop = ev_default_loop(0);
-	ev_io_init(&server->watcher, server_callback_accept, server->fd, EV_READ);
+	struct ev_io *watcher = &server->watcher;
+	ev_io_init(watcher, server_callback_accept, server->fd, EV_READ);
 	ev_io_start(loop, &server->watcher);
 	ev_loop(loop, 0);
 
@@ -402,15 +409,15 @@ server_callback_accept(struct ev_loop *loop, ev_io *w, int revents)
 
 	LOG_SERVER(server, LOG_INFO,
 		"connection from: %s:%d\n", client->hostname, client->port);
-	ev_io_init(&client->watcher_read,
-			server_callback_read, fd, EV_READ);
+	struct ev_io *watcher_read = &client->watcher_read;
+	ev_io_init(watcher_read, server_callback_read, fd, EV_READ);
 	ev_io_start(loop, &client->watcher_read);
 
 	/* Init-only watcher_write. It will be started when data are
 	 * available in client->buffer_write.
 	 */
-	ev_io_init(&client->watcher_write,
-			server_callback_write, fd, EV_WRITE);
+	struct ev_io *watcher_write = &client->watcher_write;
+	ev_io_init(watcher_write, server_callback_write, fd, EV_WRITE);
 	if (server->callbacks.accept)
 		server->callbacks.accept(server, client, fd);
 	return ;
