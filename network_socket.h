@@ -20,14 +20,27 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#include <ev.h>
 
-int socket_init(int *fd);
+typedef enum {
+	SOCKET_UNIX = 0,
+	SOCKET_TCP,
+	SOCKET_INVALID
+} socket_type_t;
+
+
+int socket_unix(void);
+int socket_tcp(void);
+int socket_init(int fd);
+int socket_close(int fd);
+
 int socket_set_nonblocking(int fd);
 int socket_set_tcpnodelay(int fd);
-int socket_listen(int fd, struct sockaddr_in *addr,
+
+int socket_listen_tcp(int fd, struct sockaddr_in *addr,
 		const char *host, int port, int backlog);
-int socket_close(int fd);
+
+int socket_connect_unix(const int fd, const char *path);
+int socket_connect_tcp(const int fd, const char *ip, const int port);
 
 #endif
 

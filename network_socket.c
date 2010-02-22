@@ -15,11 +15,13 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <string.h>
 
 #include <errno.h>
 #include <assert.h>
@@ -28,35 +30,53 @@
 
 
 
+/* Create and close */
+inline
 int
-socket_init(int *fd)
+socket_unix(void)
 {
-	*fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (*fd == -1)
-		return errno;
+        return socket(AF_UNIX, SOCK_STREAM, 0);
+}
 
-	int optval = 1;
-	int err = setsockopt(*fd, SOL_SOCKET, SO_REUSEADDR,
-			&optval, sizeof(optval));
-	if (err == -1) {
-		err = errno;
-		goto fail_setsockopt;
-	}
 
-	return 0;
-fail_setsockopt:
-	close(*fd);
-	return err;
+
+inline
+int
+socket_tcp(void)
+{
+        return socket(PF_INET, SOCK_STREAM, 0);
 }
 
 
 
 int
+socket_init(int fd)
+{
+	int optval = 1;
+	int err = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+			&optval, sizeof(optval));
+	if (err == -1) return errno;
+	return 0;
+}
+
+
+
+int
+socket_close(int fd)
+{
+	int err = close(fd);
+	if (err == -1) return errno;
+	return 0;
+}
+
+
+
+/* Settings */
+int
 socket_set_nonblocking(int fd)
 {
 	int err = fcntl(fd, F_SETFL, O_NONBLOCK);
-	if (err == -1)
-		return errno;
+	if (err == -1) return errno;
 	return 0;
 }
 
@@ -74,8 +94,9 @@ socket_set_tcpnodelay(int fd)
 
 
 
+/* Server API */
 int
-socket_listen(int fd, struct sockaddr_in *addr,
+socket_listen_tcp(int fd, struct sockaddr_in *addr,
 		const char *host, int port, int backlog)
 {
 	const int addr_family = AF_INET;
@@ -99,14 +120,42 @@ socket_listen(int fd, struct sockaddr_in *addr,
 
 
 
+/* client API */
+inline
 int
-socket_close(int fd)
+socket_connect_unix(const int fd, const char *path_unix)
 {
-	int err = close(fd);
-	if (err == -1)
-		return errno;
-	return 0;
+        assert(fd != -1 && path_unix != NULL);
+        struct sockaddr_un server_addr;
+        const socklen_t addr_len = sizeof(server_addr);
+
+        memset(&server_addr, 0, addr_len);
+        server_addr.sun_family = AF_UNIX;
+        strcpy(server_addr.sun_path, path_unix);
+
+        return connect(fd, (const struct sockaddr *) &server_addr, addr_len);
 }
+
+
+
+inline
+int
+socket_connect_tcp(const int fd, const char *ip, const int port)
+{
+        assert(fd != -1 && ip != NULL && port > 0);
+        struct sockaddr_in server_addr;
+        const socklen_t addr_len = sizeof(server_addr);
+
+        memset(&server_addr, 0, addr_len);
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_port = htons(port);
+        inet_pton(AF_INET, ip, &server_addr.sin_addr.s_addr);
+        memset(server_addr.sin_zero, 0, sizeof(server_addr.sin_zero));
+
+        return connect(fd, (const struct sockaddr *) &server_addr, addr_len);
+}
+
+
 
 /* vim: ts=8:sw=8:noet
 */
