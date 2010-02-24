@@ -59,9 +59,9 @@ typedef int (*callback_request_t)(struct ev_loop *loop, ev_io *w,
 		struct simple_buffer *bufwrite, struct simple_buffer *bufread, int *done);
 
 struct server_callbacks {
-	callback_log_t	    log;
-	callback_accept_t   accept;
-	callback_request_t  do_request;
+	callback_log_t		log;
+	callback_accept_t	accept;
+	callback_request_t	do_request;
 };
 
 struct server {
@@ -99,7 +99,7 @@ void server_free(struct server *server);
  * @return 0 on success, errno value on error.
  */
 int server_init(struct server *server,
-		struct server_callbacks *callbacks, server_flags_t flags);
+		struct server_callbacks *callbacks, void *prv, server_flags_t flags);
 
 /** Listen of the file descriptor.
  * Start the main event loop and listen for incoming connections on the file

@@ -99,7 +99,8 @@ server_stop_sighandler(int signum)
 static inline void signal_ignore(int signum) {};
 int
 server_init(struct server *server,
-		struct server_callbacks *callbacks, server_flags_t flags)
+		struct server_callbacks *callbacks, void *prv,
+		server_flags_t flags)
 {
 	int err;
 	server->fd = socket_tcp();
@@ -126,6 +127,7 @@ server_init(struct server *server,
 		goto fail_missing_callback;
 	}
 	server->callbacks.do_request = callbacks->do_request;
+	server->prv = prv;
 
 	signal(SIGPIPE, signal_ignore);
 	signal(SIGTERM, server_stop_sighandler);
