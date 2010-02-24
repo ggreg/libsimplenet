@@ -102,7 +102,8 @@ socket_listen_unix(int fd, struct sockaddr_un *addr,
 	const int addr_family = AF_UNIX;
 	addr->sun_family = addr_family;
 	strncpy(addr->sun_path, path, strlen(path));
-	int err = bind(fd, (const struct sockaddr *) addr, sizeof(*addr));
+	const size_t addrsize = sizeof(struct sockaddr_un);
+	int err = bind(fd, (const struct sockaddr *) addr, addrsize);
 	if (err == -1) return errno;
 	err = listen(fd, backlog);
 	if (err == -1) return errno;
@@ -119,7 +120,8 @@ socket_listen_tcp(int fd, struct sockaddr_in *addr,
 	if (ok == 0) return EINVAL;
 	if (ok == -1) return errno;
 	addr->sin_port = htons(port);
-	int err = bind(fd, (const struct sockaddr *) addr, sizeof(*addr));
+	const size_t addrsize = sizeof(struct sockaddr_in);
+	int err = bind(fd, (const struct sockaddr *) addr, addrsize);
 	if (err == -1) return errno;
 	err = listen(fd, backlog);
 	if (err == -1) return errno;

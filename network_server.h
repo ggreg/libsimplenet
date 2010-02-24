@@ -72,7 +72,7 @@ struct server {
         struct list_head clients;
         uint32_t nr_clients;
 	uint32_t max_clients;
-        struct sockaddr  *addr;
+        void *addr;
 	struct server_callbacks callbacks;
 	void *prv;
 };

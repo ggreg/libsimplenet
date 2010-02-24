@@ -172,6 +172,7 @@ server_listen_unix(struct server *server, const void *conf_)
 	const struct socket_config_unix *conf = conf_;
 	server->addr = malloc(sizeof(struct sockaddr_un));
 	if (server->addr == NULL) return errno;
+	memset(server->addr, 0, sizeof(struct sockaddr_un));
 	return socket_listen_unix(server->fd,
 			(struct sockaddr_un *) server->addr,
 			conf->path, conf->backlog);
@@ -184,6 +185,7 @@ server_listen_tcp(struct server *server, const void *conf_)
 	const struct socket_config_tcp *conf = conf_;
 	server->addr = malloc(sizeof(struct sockaddr_in));
 	if (server->addr == NULL) return errno;
+	memset(server->addr, 0, sizeof(struct sockaddr_in));
 	return socket_listen_tcp(server->fd,
 			(struct sockaddr_in *) server->addr,
 			conf->ip, conf->port, conf->backlog);
