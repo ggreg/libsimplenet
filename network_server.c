@@ -127,6 +127,7 @@ server_init(struct server *server,
 		goto fail_missing_callback;
 	}
 	server->callbacks.do_request = callbacks->do_request;
+	server->callbacks.postlisten = callbacks->postlisten;
 	server->prv = prv;
 
 	signal(SIGPIPE, signal_ignore);
@@ -148,6 +149,8 @@ server_listen(struct server *server, const char *host, int port, int backlog)
 	int err = socket_listen_tcp(server->fd, &server->addr, host, port, backlog);
 	if (err)
 		return err;
+	if (server->callbacks.postlisten)
+		server->callbacks.postlisten(server);
 
 	struct ev_loop *loop = ev_default_loop(0);
 	struct ev_io *watcher = &server->watcher;

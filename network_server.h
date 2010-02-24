@@ -57,11 +57,13 @@ typedef int (*callback_accept_t)(
 		struct server *server, struct peer_client *client, int fd);
 typedef int (*callback_request_t)(struct ev_loop *loop, ev_io *w,
 		struct simple_buffer *bufwrite, struct simple_buffer *bufread, int *done);
+typedef int (*callback_postlisten_t)(struct server *server);
 
 struct server_callbacks {
 	callback_log_t		log;
 	callback_accept_t	accept;
 	callback_request_t	do_request;
+	callback_postlisten_t	postlisten;
 };
 
 struct server {
