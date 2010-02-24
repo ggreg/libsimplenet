@@ -198,8 +198,8 @@ server_listen_tcp(struct server *server, const void *conf_)
 int
 server_listen(struct server *server, const void *conf)
 {
-	if (server->type < SOCKET_UNIX &&
-		server->type >= SOCKET_INVALID) return EAFNOSUPPORT;
+	if (server->type < SOCKET_UNIX && server->type >= SOCKET_INVALID)
+		return EAFNOSUPPORT;
 	networkserver_listen_t _listen = socket_type_ops[server->type].listen;
 	int err = _listen(server, conf);
 	if (err) return err;
