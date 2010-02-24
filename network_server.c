@@ -79,6 +79,8 @@ server_stop(struct server *server, int err)
 		peer_client_free(client);
 	}
 	socket_close(server->fd);
+	if (server->callbacks.stop)
+		server->callbacks.stop(server);
 	server_free(server);
 	ev_unloop(EV_DEFAULT, EVUNLOOP_ALL);
 	exit(err);
@@ -128,6 +130,7 @@ server_init(struct server *server,
 	}
 	server->callbacks.do_request = callbacks->do_request;
 	server->callbacks.postlisten = callbacks->postlisten;
+	server->callbacks.stop = callbacks->stop;
 	server->prv = prv;
 
 	signal(SIGPIPE, signal_ignore);
