@@ -126,8 +126,12 @@ int
 server_init(struct server *server,
 		struct server_callbacks *callbacks, server_flags_t flags)
 {
+	if (server->type < SOCKET_UNIX && server->type >= SOCKET_INVALID)
+		return EAFNOSUPPORT;
+	networkserver_create_t _socket = socket_type_ops[server->type].create;
+
 	int err;
-	server->fd = socket_tcp();
+	server->fd = _socket();
 	if (server->fd == -1) {
 		err = errno;
 		goto fail_socket;
