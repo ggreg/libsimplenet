@@ -28,6 +28,7 @@
 
 #include "network_list.h"
 #include "network_buffer.h"
+#include "network_socket.h"
 
 #define LOG_SERVER(server, prio, fmt, args...) \
 	(server)->callbacks.log(prio, fmt, ##args);
@@ -66,11 +67,12 @@ struct server_callbacks {
 
 struct server {
         ev_io   watcher;
+	socket_type_t type;
         int     fd;
         struct list_head clients;
         uint32_t nr_clients;
 	uint32_t max_clients;
-        struct sockaddr_in  addr;
+        struct sockaddr  *addr;
 	struct server_callbacks callbacks;
 	void *prv;
 };
@@ -83,7 +85,7 @@ struct server {
  * error happened.
  * @see server_free().
  */
-struct server *server_new(uint32_t max_clients);
+struct server *server_new(socket_type_t type, uint32_t max_clients);
 
 /** Free a server.
  * Free the memory allocated for server and for server->clients. Assert if
@@ -110,8 +112,7 @@ int server_init(struct server *server,
  * @param backlog maximum number of requests to queue in socket backlog.
  * @return 0 on success, errno value on error.
  */
-int server_listen(struct server *server,
-		const char *host, int port, int backlog);
+int server_listen(struct server *server, const void *conf);
 
 /** Stop a server and clean internal structures.
  * @param server pointer to the server to stop.

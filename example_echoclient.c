@@ -34,7 +34,7 @@ main(int argc, char **argv)
 	usage(argv);
 	exit(EINVAL);
     }
-    struct network_config_tcp conf = {
+    struct socket_config_tcp conf = {
 	.ip = argv[1],
 	.port = atoi(argv[2])
     };

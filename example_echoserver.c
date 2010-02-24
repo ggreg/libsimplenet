@@ -30,7 +30,7 @@ client_callback_do_request(struct ev_loop *loop, ev_io *w,
 		int *done)
 {
 	struct peer_client *client =
-		container_of(w, struct peer_client, watcher_read); 
+		container_of(w, struct peer_client, watcher_read);
 	char *data = client->server->prv;
 	simple_buffer_append(bufwrite, data, strlen(data));
 	simple_buffer_append(bufwrite,
@@ -44,11 +44,7 @@ client_callback_do_request(struct ev_loop *loop, ev_io *w,
 int
 main(int argc, char **argv)
 {
-	const char *host = "127.0.0.1";
-	int port = 12345;
-	int backlog = 256;
-
-	struct server *server = server_new(2);
+	struct server *server = server_new(SOCKET_TCP, 2);
 	if (server == NULL)
 		exit(errno);
 
@@ -58,10 +54,16 @@ main(int argc, char **argv)
 		.do_request = client_callback_do_request
 	};
 
+	const struct socket_config_tcp config = {
+		.ip = "127.0.0.1",
+		.port = 12345,
+		.backlog = 256
+	};
+
 	server->prv = "hello, ";
 	int err = server_init(server, &callbacks, SERVER_NONBLOCKING);
 	if (err) goto fail_server_init;
-	server_listen(server, host, port, backlog);
+	server_listen(server, &config);
 
 fail_server_init:
 	server_stop(server, err);
