@@ -104,6 +104,8 @@ server_stop(struct server *server, int err)
 		peer_client_free(client);
 	}
 	socket_close(server->fd);
+	if (server->callbacks.stop)
+		server->callbacks.stop(server);
 	server_free(server);
 	ev_unloop(EV_DEFAULT, EVUNLOOP_ALL);
 	exit(err);
@@ -124,7 +126,8 @@ server_stop_sighandler(int signum)
 static inline void signal_ignore(int signum) {};
 int
 server_init(struct server *server,
-		struct server_callbacks *callbacks, server_flags_t flags)
+		struct server_callbacks *callbacks, void *prv,
+		server_flags_t flags)
 {
 	if (server->type < SOCKET_UNIX && server->type >= SOCKET_INVALID)
 		return EAFNOSUPPORT;
@@ -155,6 +158,9 @@ server_init(struct server *server,
 		goto fail_missing_callback;
 	}
 	server->callbacks.do_request = callbacks->do_request;
+	server->callbacks.postlisten = callbacks->postlisten;
+	server->callbacks.stop = callbacks->stop;
+	server->prv = prv;
 
 	signal(SIGPIPE, signal_ignore);
 	signal(SIGTERM, server_stop_sighandler);
@@ -198,11 +204,14 @@ server_listen_tcp(struct server *server, const void *conf_)
 int
 server_listen(struct server *server, const void *conf)
 {
+<<<<<<< HEAD
 	if (server->type < SOCKET_UNIX && server->type >= SOCKET_INVALID)
 		return EAFNOSUPPORT;
 	networkserver_listen_t _listen = socket_type_ops[server->type].listen;
 	int err = _listen(server, conf);
 	if (err) return err;
+	if (server->callbacks.postlisten)
+		server->callbacks.postlisten(server);
 
 	struct ev_loop *loop = ev_default_loop(0);
 	struct ev_io *watcher = &server->watcher;
