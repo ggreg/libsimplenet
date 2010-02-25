@@ -92,9 +92,7 @@ main(int argc, char **argv)
 		.do_request = client_callback_do_request
 	};
 
-
-	server->prv = "hello, ";
-	int err = server_init(server, &callbacks, NULL, SERVER_NONBLOCKING);
+	int err = server_init(server, &callbacks, "hello, ", SERVER_NONBLOCKING);
 	if (err) goto fail_server_init;
 	server_listen(server, conf);
 

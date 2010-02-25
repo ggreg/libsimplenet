@@ -63,8 +63,7 @@ server_new(socket_type_t type, uint32_t max_clients)
 		return NULL;
 	}
 	struct server *server = malloc(sizeof(*server));
-	if (server == NULL)
-		return NULL;
+	if (server == NULL) return NULL;
 	server->type = type;
 	memset(&server->watcher, 0, sizeof(server->watcher));
 	server->fd = -1;
@@ -72,6 +71,7 @@ server_new(socket_type_t type, uint32_t max_clients)
 	server->nr_clients = 0;
 	server->max_clients = max_clients;
 	server->addr = NULL;
+	memset(&server->callbacks, 0, sizeof(server->callbacks));
 
 	return server;
 }
