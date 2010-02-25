@@ -96,25 +96,35 @@ socket_set_tcpnodelay(int fd)
 
 /* Server API */
 int
+socket_listen_unix(int fd, struct sockaddr_un *addr,
+		const char *path, int backlog)
+{
+	const int addr_family = AF_UNIX;
+	addr->sun_family = addr_family;
+	strncpy(addr->sun_path, path, strlen(path));
+	const size_t addrsize = sizeof(struct sockaddr_un);
+	int err = bind(fd, (const struct sockaddr *) addr, addrsize);
+	if (err == -1) return errno;
+	err = listen(fd, backlog);
+	if (err == -1) return errno;
+	return 0;
+}
+
+int
 socket_listen_tcp(int fd, struct sockaddr_in *addr,
 		const char *host, int port, int backlog)
 {
 	const int addr_family = AF_INET;
 	addr->sin_family = addr_family;
 	int ok = inet_pton(addr_family, host, &addr->sin_addr.s_addr);
-	if (ok == 0)
-		return EINVAL;
-	if (ok == -1)
-		return errno;
+	if (ok == 0) return EINVAL;
+	if (ok == -1) return errno;
 	addr->sin_port = htons(port);
-	int err = bind(fd, (const struct sockaddr *) addr,
-			sizeof(*addr));
-	if (err == -1)
-		return errno;
+	const size_t addrsize = sizeof(struct sockaddr_in);
+	int err = bind(fd, (const struct sockaddr *) addr, addrsize);
+	if (err == -1) return errno;
 	err = listen(fd, backlog);
-	if (err == -1)
-		return errno;
-
+	if (err == -1) return errno;
 	return 0;
 }
 

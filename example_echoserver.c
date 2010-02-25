@@ -16,7 +16,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <syslog.h>
+#include <stdio.h>
 
+#include "network_socket.h"
 #include "network_server.h"
 
 
@@ -30,7 +32,7 @@ client_callback_do_request(struct ev_loop *loop, ev_io *w,
 		int *done)
 {
 	struct peer_client *client =
-		container_of(w, struct peer_client, watcher_read); 
+		container_of(w, struct peer_client, watcher_read);
 	char *data = client->server->prv;
 	simple_buffer_append(bufwrite, data, strlen(data));
 	simple_buffer_append(bufwrite,
@@ -41,14 +43,46 @@ client_callback_do_request(struct ev_loop *loop, ev_io *w,
 	return 0;
 }
 
+void
+usage(char **argv)
+{
+	fprintf(stderr, "%s tcp <ip> <port>\n", argv[0]);
+	fprintf(stderr, "%s unix <path_to_socket>\n", argv[0]);
+}
+
 int
 main(int argc, char **argv)
 {
-	const char *host = "127.0.0.1";
-	int port = 12345;
-	int backlog = 256;
+	if (argc < 3) {
+		usage(argv);
+		exit(EINVAL);
+	}
 
-	struct server *server = server_new(2);
+	int socket_type;
+	void *conf;
+
+	struct socket_config_unix unixcf;
+	if (strncmp("unix", argv[1], 4) == 0) {
+		unixcf.path = "/tmp/simpleserver.socket";
+		unixcf.backlog = 2;
+		socket_type = SOCKET_UNIX;
+		conf = &unixcf;
+	};
+
+	struct socket_config_tcp tcpcf;
+	if (strncmp("tcp", argv[1], 3) == 0) {
+		if (argc < 4) {
+			usage(argv);
+			exit(EINVAL);
+		}
+		tcpcf.ip = "127.0.0.1";
+		tcpcf.port = 12345;
+		tcpcf.backlog = 2;
+		conf = &tcpcf;
+		socket_type = SOCKET_TCP;
+	};
+
+	struct server *server = server_new(socket_type, 2);
 	if (server == NULL)
 		exit(errno);
 
@@ -58,10 +92,11 @@ main(int argc, char **argv)
 		.do_request = client_callback_do_request
 	};
 
+
 	server->prv = "hello, ";
 	int err = server_init(server, &callbacks, NULL, SERVER_NONBLOCKING);
 	if (err) goto fail_server_init;
-	server_listen(server, host, port, backlog);
+	server_listen(server, conf);
 
 fail_server_init:
 	server_stop(server, err);

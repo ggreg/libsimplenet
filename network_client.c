@@ -25,19 +25,19 @@
 #include "network_client.h"
 
 typedef int (*networkclient_create_t)(void);
-typedef int (*networkclient_connect_t)(struct network_client *, void *);
+typedef int (*networkclient_connect_t)(struct network_client *, const void *);
 
 struct socket_ops {
     networkclient_create_t	create;
     networkclient_connect_t	connect;
 };
 
-static int network_client_connect_unix(struct network_client *, void *);
-static int network_client_connect_tcp(struct network_client *, void *);
+static int network_client_connect_unix(struct network_client *, const void *);
+static int network_client_connect_tcp(struct network_client *, const void *);
 
 static
 const struct socket_ops socket_type_ops[] = {
-[SOCKET_UNIX]	{socket_unix, network_client_connect_unix}, 
+[SOCKET_UNIX]	{socket_unix, network_client_connect_unix},
 [SOCKET_TCP]	{socket_tcp, network_client_connect_tcp},
 [SOCKET_INVALID]{NULL,NULL}
 };
@@ -46,14 +46,14 @@ struct network_client *
 network_client_new(socket_type_t type)
 {
     if (type < SOCKET_UNIX && type >= SOCKET_INVALID) {
-	errno = EINVAL;
+	errno = EAFNOSUPPORT;
 	return NULL;
     }
     struct network_client *client = malloc(sizeof(*client));
     if (client == NULL) return NULL;
     client->type = type;
     networkclient_create_t socket_create = socket_type_ops[type].create;
-    client->fd = socket_create(); 
+    client->fd = socket_create();
     return client;
 }
 
@@ -89,18 +89,18 @@ network_client_connect(struct network_client *client, void *conf)
 
 static
 int
-network_client_connect_unix(struct network_client *client, void *conf_) 
+network_client_connect_unix(struct network_client *client, const void *conf_)
 {
-    struct network_config_unix *conf = conf_;
+    const struct socket_config_unix *conf = conf_;
     return socket_connect_unix(client->fd, conf->path);
 }
 
 
 static
 int
-network_client_connect_tcp(struct network_client *client, void *conf_) 
+network_client_connect_tcp(struct network_client *client, const void *conf_)
 {
-    struct network_config_tcp *conf = conf_;
+    const struct socket_config_tcp *conf = conf_;
     return socket_connect_tcp(client->fd, conf->ip, conf->port);
 }
 

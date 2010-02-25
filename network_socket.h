@@ -18,6 +18,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 
 
@@ -27,6 +28,16 @@ typedef enum {
 	SOCKET_INVALID
 } socket_type_t;
 
+struct socket_config_unix {
+	char *path;
+	int backlog;
+};
+
+struct socket_config_tcp {
+	char *ip;
+	int port;
+	int backlog;
+};
 
 int socket_unix(void);
 int socket_tcp(void);
@@ -36,6 +47,8 @@ int socket_close(int fd);
 int socket_set_nonblocking(int fd);
 int socket_set_tcpnodelay(int fd);
 
+int socket_listen_unix(int fd, struct sockaddr_un *addr,
+		const char *path, int backlog);
 int socket_listen_tcp(int fd, struct sockaddr_in *addr,
 		const char *host, int port, int backlog);
 

@@ -19,15 +19,6 @@
 #include "network_socket.h"
 
 
-struct network_config_unix {
-	char *path;
-};
-
-struct network_config_tcp {
-	char *ip;
-	int port;
-};
-
 struct network_client {
     int	fd;
     socket_type_t type;

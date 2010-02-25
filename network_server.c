@@ -35,20 +35,43 @@ static void server_callback_read(struct ev_loop *, ev_io *, int);
 
 struct server *_server = NULL;
 
+static int server_listen_unix(struct server *, const void *);
+static int server_listen_tcp(struct server *, const void *);
+
+typedef int (*networkserver_create_t)(void);
+typedef int (*networkserver_listen_t)(struct server *, const void *);
+
+struct socket_ops {
+	networkserver_create_t	create;
+	networkserver_listen_t	listen;
+};
+
+static
+const struct socket_ops socket_type_ops[] = {
+[SOCKET_UNIX]	{socket_unix, server_listen_unix},
+[SOCKET_TCP]	{socket_tcp, server_listen_tcp},
+[SOCKET_INVALID]{NULL,NULL}
+};
+
 /* Public API */
 
 struct server *
-server_new(uint32_t max_clients)
+server_new(socket_type_t type, uint32_t max_clients)
 {
+	if (type < SOCKET_UNIX && type >= SOCKET_INVALID) {
+		errno = EAFNOSUPPORT;
+		return NULL;
+	}
 	struct server *server = malloc(sizeof(*server));
 	if (server == NULL)
 		return NULL;
+	server->type = type;
 	memset(&server->watcher, 0, sizeof(server->watcher));
 	server->fd = -1;
 	INIT_LIST_HEAD(&server->clients);
 	server->nr_clients = 0;
 	server->max_clients = max_clients;
-	memset(&server->addr, 0, sizeof(server->addr));
+	server->addr = NULL;
 
 	return server;
 }
@@ -57,6 +80,8 @@ void
 server_free(struct server *server)
 {
 	assert(server != NULL);
+	if (server->addr)
+		free(server->addr);
 	free(server);
 }
 
@@ -104,8 +129,12 @@ server_init(struct server *server,
 		struct server_callbacks *callbacks, void *prv,
 		server_flags_t flags)
 {
+	if (server->type < SOCKET_UNIX && server->type >= SOCKET_INVALID)
+		return EAFNOSUPPORT;
+	networkserver_create_t _socket = socket_type_ops[server->type].create;
+
 	int err;
-	server->fd = socket_tcp();
+	server->fd = _socket();
 	if (server->fd == -1) {
 		err = errno;
 		goto fail_socket;
@@ -146,12 +175,41 @@ fail_socket:
 	return err;
 }
 
+static
 int
-server_listen(struct server *server, const char *host, int port, int backlog)
+server_listen_unix(struct server *server, const void *conf_)
 {
-	int err = socket_listen_tcp(server->fd, &server->addr, host, port, backlog);
-	if (err)
-		return err;
+	const struct socket_config_unix *conf = conf_;
+	server->addr = malloc(sizeof(struct sockaddr_un));
+	if (server->addr == NULL) return errno;
+	memset(server->addr, 0, sizeof(struct sockaddr_un));
+	return socket_listen_unix(server->fd,
+			(struct sockaddr_un *) server->addr,
+			conf->path, conf->backlog);
+}
+
+static
+int
+server_listen_tcp(struct server *server, const void *conf_)
+{
+	const struct socket_config_tcp *conf = conf_;
+	server->addr = malloc(sizeof(struct sockaddr_in));
+	if (server->addr == NULL) return errno;
+	memset(server->addr, 0, sizeof(struct sockaddr_in));
+	return socket_listen_tcp(server->fd,
+			(struct sockaddr_in *) server->addr,
+			conf->ip, conf->port, conf->backlog);
+}
+
+int
+server_listen(struct server *server, const void *conf)
+{
+<<<<<<< HEAD
+	if (server->type < SOCKET_UNIX && server->type >= SOCKET_INVALID)
+		return EAFNOSUPPORT;
+	networkserver_listen_t _listen = socket_type_ops[server->type].listen;
+	int err = _listen(server, conf);
+	if (err) return err;
 	if (server->callbacks.postlisten)
 		server->callbacks.postlisten(server);
 
@@ -161,7 +219,7 @@ server_listen(struct server *server, const char *host, int port, int backlog)
 	ev_io_start(loop, &server->watcher);
 	ev_loop(loop, 0);
 
-	return err;
+	return 0;
 }
 
 
@@ -393,7 +451,7 @@ server_callback_accept(struct ev_loop *loop, ev_io *w, int revents)
 {
 	struct server *server = (struct server *) w;
 	socklen_t socklen = sizeof(server->addr);
-	int fd = accept(server->fd, (struct sockaddr *) &server->addr, &socklen);
+	int fd = accept(server->fd, server->addr, &socklen);
 	if (fd == -1) {
 		LOG_SERVER(server, LOG_ERR, "accept failed: %d", errno);
 		return ;
@@ -414,7 +472,7 @@ server_callback_accept(struct ev_loop *loop, ev_io *w, int revents)
 			__FILE__, __LINE__, __func__, errno);
 		socket_close(fd);
 	}
-	peer_client_set_addr(client, (struct sockaddr*) &server->addr, socklen);
+	peer_client_set_addr(client, server->addr, socklen);
 	server_add_client(server, client);
 
 	LOG_SERVER(server, LOG_INFO,
