@@ -93,8 +93,7 @@ main(int argc, char **argv)
 	};
 
 
-	server->prv = "hello, ";
-	int err = server_init(server, &callbacks, SERVER_NONBLOCKING);
+	int err = server_init(server, &callbacks, "hello, ", SERVER_NONBLOCKING);
 	if (err) goto fail_server_init;
 	server_listen(server, conf);
 
