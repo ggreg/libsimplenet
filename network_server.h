@@ -55,11 +55,16 @@ struct peer_client {
 
 typedef void (*callback_log_t)(int priority, const char *fmt, ...);
 typedef int (*callback_accept_t)(
-		struct server *server, struct peer_client *client, int fd);
-typedef int (*callback_request_t)(struct ev_loop *loop, ev_io *w,
-		struct simple_buffer *bufwrite, struct simple_buffer *bufread, int *done);
-typedef int (*callback_postlisten_t)(struct server *server);
-typedef int (*callback_stop_t)(struct server *server);
+		void *prv,
+		struct peer_client *client,
+		int fd);
+typedef int (*callback_request_t)(
+		void *prv,
+		struct simple_buffer *bufwrite,
+		struct simple_buffer *bufread,
+		int *done);
+typedef int (*callback_postlisten_t)(void *prv);
+typedef int (*callback_stop_t)(void *prv);
 
 struct server_callbacks {
 	callback_log_t		log;

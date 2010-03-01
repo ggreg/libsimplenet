@@ -33,6 +33,10 @@
 static void server_callback_accept(struct ev_loop *, ev_io *, int);
 static void server_callback_read(struct ev_loop *, ev_io *, int);
 
+static void server_callback_read(struct ev_loop *, ev_io *, int);
+static void server_callback_write(struct ev_loop *, ev_io *, int);
+static void server_callback_disconnect(struct ev_loop *, ev_io *, int);
+
 struct server *_server = NULL;
 
 static int server_listen_unix(struct server *, const void *);
@@ -105,7 +109,7 @@ server_stop(struct server *server, int err)
 	}
 	socket_close(server->fd);
 	if (server->callbacks.stop)
-		server->callbacks.stop(server);
+		server->callbacks.stop(server->prv);
 	server_free(server);
 	ev_unloop(EV_DEFAULT, EVUNLOOP_ALL);
 	exit(err);
@@ -126,7 +130,8 @@ server_stop_sighandler(int signum)
 static inline void signal_ignore(int signum) {};
 int
 server_init(struct server *server,
-		struct server_callbacks *callbacks, void *prv,
+		struct server_callbacks *callbacks,
+		void *prv,
 		server_flags_t flags)
 {
 	if (server->type < SOCKET_UNIX && server->type >= SOCKET_INVALID)
@@ -210,7 +215,7 @@ server_listen(struct server *server, const void *conf)
 	int err = _listen(server, conf);
 	if (err) return err;
 	if (server->callbacks.postlisten)
-		server->callbacks.postlisten(server);
+		server->callbacks.postlisten(server->prv);
 
 	struct ev_loop *loop = ev_default_loop(0);
 	struct ev_io *watcher = &server->watcher;
@@ -229,6 +234,7 @@ void
 server_callback_disconnect(struct ev_loop *loop, ev_io *w, int revents)
 {
 	struct peer_client *client = (struct peer_client *) w;
+	server_callback_write(loop, &client->watcher_write, revents);
 	ev_io_stop(loop, &client->watcher_read);
 	ev_io_stop(loop, &client->watcher_write);
 	socket_close(w->fd);
@@ -320,7 +326,8 @@ server_callback_read(struct ev_loop *loop, ev_io *w, int revents)
 		}
 		simple_buffer_append(client->buffer_read, buf, n);
 		for (;;) {
-			int err = client->server->callbacks.do_request(loop, w,
+			int err = client->server->callbacks.do_request(
+					client->server->prv,
 					client->buffer_write,
 					client->buffer_read,
 					&client->done_read);
@@ -486,7 +493,7 @@ server_callback_accept(struct ev_loop *loop, ev_io *w, int revents)
 	struct ev_io *watcher_write = &client->watcher_write;
 	ev_io_init(watcher_write, server_callback_write, fd, EV_WRITE);
 	if (server->callbacks.accept)
-		server->callbacks.accept(server, client, fd);
+		server->callbacks.accept(server->prv, client, fd);
 	return ;
 }
 

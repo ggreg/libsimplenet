@@ -26,15 +26,12 @@
  *
  */
 int
-client_callback_do_request(struct ev_loop *loop, ev_io *w,
+client_callback_do_request(void *data,
 		struct simple_buffer *bufwrite,
 		struct simple_buffer *bufread,
 		int *done)
 {
-	struct peer_client *client =
-		container_of(w, struct peer_client, watcher_read);
-	char *data = client->server->prv;
-	simple_buffer_append(bufwrite, data, strlen(data));
+	simple_buffer_append(bufwrite, (char *) data, strlen(data));
 	simple_buffer_append(bufwrite,
 			simple_buffer_get_head(bufread),
 			simple_buffer_size(bufread));
