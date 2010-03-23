@@ -233,7 +233,8 @@ static
 void
 server_callback_disconnect(struct ev_loop *loop, ev_io *w, int revents)
 {
-	struct peer_client *client = (struct peer_client *) w;
+	struct peer_client *client;
+	client = container_of(w, struct peer_client, watcher_read);
 	server_callback_write(loop, &client->watcher_write, revents);
 	ev_io_stop(loop, &client->watcher_read);
 	ev_io_stop(loop, &client->watcher_write);
@@ -401,6 +402,8 @@ peer_client_new(struct server *server)
 	client->done_write = 0;
 	client->server = server;
 	INIT_LIST_HEAD(&client->list);
+	memset(client->hostname, 0, NI_MAXHOST);
+	client->port = -1;
 
 	return client;
 fail_buffer_write:

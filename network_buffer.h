@@ -52,6 +52,7 @@ simple_buffer_new(uint32_t chunk_size)
 	buf->max_size = buf->chunk_size;
 	buf->data = malloc(buf->max_size);
 	if (buf->data == NULL) goto fail_data;
+	memset(buf->data, 0, buf->max_size);
 	buf->head = buf->data;
 	buf->tail = buf->head;
 	buf->userptr = buf->head;
